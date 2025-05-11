@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Ticker List</title>
+    </head>
+    <body>
+        <h1>Search for a Stock Ticker</h1>
+        <form id="ticker-form">
+            <!-- Input field for search -->
+            <input type="text" id="ticker-input" name="ticker" autocomplete="off" placeholder="Start typing...">
+            <div id="suggestions" class="autocomplete-suggestions"></div>
+            <button type="submit">Go</button>
+        </form>
+
+        <h1>Select a Stock Ticker</h1>
+        <form id="select-form">
+            <label for="ticker">Choose a ticker:</label>
+            <select name="ticker" id="ticker">
+                {% for ticker in tickers %}
+                    <option value="{{ ticker }}">{{ ticker }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Go</button>
+        </form>
+
+        <h2>Choose Data Type:</h2>
+        <form id="data-type-form">
+            <label for="data-type">Select data type:</label>
+            <select id="data-type">
+                <option value="financials">Financials</option>
+                <option value="balance_sheet">Balance Sheet</option>
+                <option value="cashflow">Cash Flow</option>
+            </select>
+        </form>
+
+        <div id="info--container" class="info-container mt-4"></div>
+
+        <script>
+            const input = document.getElementById("ticker-input");
+            const suggestionsBox = document.getElementById("suggestions");
+    
+            input.addEventListener("input", async () => {
+                const query = input.value;
+                if (query.length < 1) {
+                    suggestionsBox.innerHTML = "";
+                    return;
+                }
+    
+                const res = await fetch(`/search_tickers?q=${query}`);
+                const tickers = await res.json();
+    
+                suggestionsBox.innerHTML = tickers.map(ticker =>
+                    `<div onclick="selectTicker('${ticker}')">${ticker}</div>`
+                ).join('');
+            });
+    
+            function selectTicker(ticker) {
+                document.getElementById("ticker-input").value = ticker;
+                suggestionsBox.innerHTML = "";
+            }
+    
+            document.addEventListener('click', (e) => {
+                if (!e.target.closest('#suggestions') && e.target !== input) {
+                    suggestionsBox.innerHTML = "";
+                }
+            });
+        </script>
+
+        <script>
+            const tickerForm = document.getElementById('ticker-form');
+            const tickerSelectForm = document.getElementById('select-form');
+            const container = document.getElementById('info--container');
+            const dataTypeForm = document.getElementById('data-type-form');
+
+            tickerForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const symbol = document.getElementById('ticker-input').value.trim().toUpperCase();
+                const dataType = document.getElementById('data-type').value;
+
+                if (!symbol) return; // If no symbol entered, do nothing
+
+                try {
+                    const res = await fetch(`/api/ticker_data/${symbol}/${dataType}`);
+                    if (!res.ok) {
+                        container.innerHTML = `<p class="text-danger">No data found for ${symbol}</p>`;
+                        return;
+                    }
+                    const html = await res.text();
+                    container.innerHTML = html;
+                } catch (err) {
+                    container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+                }
+            });
+
+            tickerSelectForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                const symbol = document.getElementById('ticker').value.trim().toUpperCase();
+                const dataType = document.getElementById('data-type').value;
+
+                if (!symbol) return; // If no symbol selected, do nothing
+
+                try {
+                    const res = await fetch(`/api/ticker_data/${symbol}/${dataType}`);
+                    if (!res.ok) {
+                        container.innerHTML = `<p class="text-danger">No data found for ${symbol}</p>`;
+                        return;
+                    }
+                    const html = await res.text();
+                    container.innerHTML = html;
+                } catch (err) {
+                    container.innerHTML = `<p class="text-danger">Error: ${err.message}</p>`;
+                }
+            });
+        </script>
+    </body>
+</html>
